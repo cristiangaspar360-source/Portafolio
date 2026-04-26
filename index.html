@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASR - Estado Operativo</title>
+    
+    <!-- Configuración para PWA (Guardar como App) -->
+    <meta name="theme-color" content="#ef4444">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2232/2232688.png">
+    
+    <!-- Web Manifest incrustado como Data URI para evitar archivos externos -->
+    <link rel="manifest" href='data:application/manifest+json,{"name":"ASR Dashboard","short_name":"ASR","start_url":".","display":"standalone","background_color":"#f3f4f6","theme_color":"#ef4444","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/2232/2232688.png","sizes":"512x512","type":"image/png"}]}'>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .vertical-text {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+        }
+
+        .gauge-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+        }
+
+        .transition-all-custom {
+            transition: all 1s ease-in-out;
+        }
+    </style>
+</head>
+<body class="p-4 text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white border-t-4 border-red-600 shadow-sm mb-6 p-4 flex flex-wrap justify-between items-center">
+        <h1 class="text-2xl font-bold flex items-center gap-2">
+            ASR - <span class="text-gray-600 font-medium text-xl">Estado Operativo</span>
+        </h1>
+        <div class="flex gap-4">
+            <div class="bg-yellow-100 px-3 py-1 rounded border border-yellow-200 text-sm font-bold flex items-center gap-2">
+                ASY RET <span id="val-asy-ret" class="bg-yellow-400 px-2 rounded">6</span>
+            </div>
+            <div class="bg-yellow-100 px-3 py-1 rounded border border-yellow-200 text-sm font-bold flex items-center gap-2">
+                NDK SSHIP <span id="val-ndk-sship" class="bg-yellow-400 px-2 rounded">4</span>
+            </div>
+            <div class="bg-yellow-100 px-3 py-1 rounded border border-yellow-200 text-sm font-bold flex items-center gap-2">
+                001 PATIN <span id="val-patin" class="bg-yellow-400 px-2 rounded">6</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="grid grid-cols-12 gap-6">
+        
+        <!-- Columna Izquierda: Reporte de Errores -->
+        <section class="col-span-12 lg:col-span-3 bg-white p-4 rounded shadow-sm relative overflow-hidden">
+            <h2 class="text-blue-800 font-bold border-b pb-2 mb-4 flex items-center gap-2 uppercase text-sm">
+                <i class="fa-solid fa-circle-exclamation"></i> Reporte de errores ASR
+            </h2>
+            <div id="error-list" class="space-y-4">
+                <!-- Se genera vía JS -->
+            </div>
+            <div class="mt-8 text-[10px] text-gray-400 font-bold vertical-text absolute left-0 bottom-4">
+                W49 2024
+            </div>
+        </section>
+
+        <!-- Centro: Gráfico de Gauge Principal -->
+        <section class="col-span-12 lg:col-span-6 flex flex-col items-center justify-center bg-white p-6 rounded shadow-sm relative min-h-[400px]">
+            <!-- Indicadores de Texto Superpuestos -->
+            <div class="absolute top-4 left-4 space-y-2">
+                <div class="border border-gray-300 rounded overflow-hidden flex text-xs">
+                    <div class="bg-gray-100 px-2 py-1 font-bold border-r border-gray-300">OCUPACIÓN</div>
+                    <div id="text-ocupacion" class="bg-white px-4 py-1 font-bold">0.0%</div>
+                </div>
+                <div class="border border-gray-300 rounded overflow-hidden flex text-xs">
+                    <div class="bg-gray-100 px-2 py-1 font-bold border-r border-gray-300">DISPONIBLE</div>
+                    <div id="text-disponible" class="bg-white px-4 py-1 font-bold">0.0%</div>
+                </div>
+            </div>
+
+            <div class="gauge-container flex items-center justify-center">
+                <svg viewBox="0 0 100 100" class="w-full h-full transform -rotate-90">
+                    <circle cx="50" cy="50" r="42" fill="transparent" stroke="#f3f4f6" stroke-width="12" />
+                    <!-- Los círculos de colores se controlan por stroke-dasharray en JS -->
+                    <circle id="gauge-green" cx="50" cy="50" r="42" fill="transparent" stroke="#22c55e" stroke-width="12" stroke-dasharray="0 264" />
+                    <circle id="gauge-yellow" cx="50" cy="50" r="42" fill="transparent" stroke="#fbbf24" stroke-width="12" stroke-dasharray="0 264" />
+                    <circle id="gauge-orange" cx="50" cy="50" r="42" fill="transparent" stroke="#f97316" stroke-width="12" stroke-dasharray="0 264" />
+                    <circle id="gauge-red" cx="50" cy="50" r="42" fill="transparent" stroke="#ef4444" stroke-width="12" stroke-dasharray="0 264" />
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <span class="text-3xl font-black leading-tight uppercase tracking-tighter">Capacidad<br>Crítica</span>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center max-w-sm">
+                <p id="warning-msg" class="text-red-600 font-bold text-lg leading-tight transition-opacity duration-500">
+                    Muy pocas localidades disponibles. Requiere acción urgente.
+                </p>
+            </div>
+        </section>
+
+        <!-- Derecha: Totes Vacíos -->
+        <section class="col-span-12 lg:col-span-3 bg-white p-4 rounded shadow-sm flex flex-col items-center justify-center">
+            <div class="w-full mb-6">
+                <div class="flex border border-gray-300 rounded mb-1 overflow-hidden text-xs">
+                    <div class="bg-gray-100 w-2/3 px-2 py-1 font-bold text-right border-r border-gray-300 uppercase">Totes Vacíos:</div>
+                    <div id="text-totes-vacios" class="bg-white w-1/3 px-2 py-1 font-bold text-center">0%</div>
+                </div>
+                <div class="flex border border-gray-300 rounded overflow-hidden text-xs">
+                    <div class="bg-gray-100 w-2/3 px-2 py-1 font-bold text-right border-r border-gray-300 uppercase">Faltante:</div>
+                    <div id="text-faltante" class="bg-white w-1/3 px-2 py-1 font-bold text-center">0%</div>
+                </div>
+            </div>
+
+            <div class="relative w-48 h-48 flex items-center justify-center">
+                <svg viewBox="0 0 100 100" class="w-full h-full transform -rotate-90">
+                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#e5e7eb" stroke-width="10" />
+                    <circle id="circle-totes" cx="50" cy="50" r="40" fill="transparent" stroke="#3b82f6" stroke-width="12" stroke-dasharray="0 251.2" stroke-linecap="round" class="transition-all-custom" />
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span id="label-totes" class="text-5xl font-black text-blue-500 italic">0%</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Métricas Inferiores -->
+        <div class="col-span-12 grid grid-cols-1 md:grid-cols-5 gap-4 mt-2">
+            
+            <!-- Entrando -->
+            <div class="bg-white rounded border border-gray-200">
+                <div class="flex justify-between items-center p-2 border-b bg-gray-50">
+                    <span class="font-bold text-xs uppercase"><i class="fa-solid fa-arrow-right-to-bracket text-blue-600"></i> Entrando:</span>
+                    <span id="val-entrando" class="font-bold text-blue-800">0</span>
+                </div>
+                <div class="p-2 text-[11px] space-y-1">
+                    <div class="flex justify-between"><span>POR MOLDEO:</span> <span id="val-mld" class="font-bold">0</span></div>
+                    <div class="flex justify-between"><span>POR NDK:</span> <span id="val-ndk" class="font-bold">0</span></div>
+                    <div class="flex justify-between"><span>POR ASY:</span> <span id="val-asy" class="font-bold">0</span></div>
+                </div>
+            </div>
+
+            <!-- Saliendo -->
+            <div class="bg-white rounded border border-gray-200">
+                <div class="flex justify-between items-center p-2 border-b bg-gray-50">
+                    <span class="font-bold text-xs uppercase"><i class="fa-solid fa-arrow-right-from-bracket text-orange-600"></i> Saliendo:</span>
+                    <span id="val-saliendo" class="font-bold text-blue-800">0</span>
+                </div>
+                <div class="p-2 text-[11px] space-y-1">
+                    <div class="flex justify-between"><span>HACIA ASY:</span> <span id="val-out-asy" class="font-bold">0</span></div>
+                    <div class="flex justify-between"><span>HACIA SSHIP:</span> <span id="val-out-sship" class="font-bold">0</span></div>
+                    <div class="flex justify-between"><span>BLOQUEADOS:</span> <span id="val-out-hold" class="font-bold">0</span></div>
+                </div>
+            </div>
+
+            <!-- TO's Abiertas -->
+            <div class="bg-white rounded border border-gray-200">
+                <div class="flex justify-between items-center p-2 border-b bg-gray-50">
+                    <span class="font-bold text-xs uppercase"><i class="fa-solid fa-box-open text-purple-600"></i> TO's Abiertas:</span>
+                    <span id="val-tos" class="font-bold text-blue-800">0</span>
+                </div>
+                <div class="p-3 space-y-2">
+                    <div class="border rounded flex text-[10px] overflow-hidden">
+                        <div class="bg-gray-100 px-1 py-1 w-2/3 border-r font-bold">MÁS 12H</div>
+                        <div id="val-tos-plus" class="bg-white px-1 py-1 w-1/3 text-center font-bold text-red-600">0</div>
+                    </div>
+                    <div class="border rounded flex text-[10px] overflow-hidden">
+                        <div class="bg-gray-100 px-1 py-1 w-2/3 border-r font-bold">MENOS 12H</div>
+                        <div id="val-tos-minus" class="bg-white px-1 py-1 w-1/3 text-center font-bold">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acumulados -->
+            <div class="bg-white rounded border border-gray-200">
+                <div class="p-2 border-b bg-gray-50 font-bold text-xs text-center uppercase">Lotes Recientes</div>
+                <div id="acumulados-list" class="p-2 text-[10px] space-y-1 font-mono">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+
+            <!-- Objetivo -->
+            <div class="bg-white rounded border border-gray-200">
+                <div class="p-2 border-b bg-gray-50 font-bold text-xs text-center uppercase"><i class="fa-solid fa-crosshairs"></i> Objetivos</div>
+                <div class="p-3 space-y-2 text-[10px]">
+                    <div class="border rounded flex overflow-hidden">
+                        <div class="bg-gray-100 px-1 py-1 w-2/3 border-r font-bold">LÍMITE MÁX</div>
+                        <div class="bg-white px-1 py-1 w-1/3 text-center font-bold">1000</div>
+                    </div>
+                    <div class="border rounded flex overflow-hidden">
+                        <div class="bg-gray-100 px-1 py-1 w-2/3 border-r font-bold">MÍNIMO REQ</div>
+                        <div class="bg-white px-1 py-1 w-1/3 text-center font-bold">500</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Warning Footer -->
+        <div class="col-span-12 bg-white border-2 border-black p-3 mt-4 text-center rounded shadow-sm">
+            <p class="text-sm font-black leading-tight">
+                EL RACK ESTÁ PRÁCTICAMENTE LLENO, CON UN RIESGO INMINENTE DE INTERRUPCIÓN. 
+                SE REQUIERE ACCIÓN INMEDIATA PARA LIBERAR ESPACIO Y PERMITIR EL FLUJO NORMAL.
+            </p>
+        </div>
+    </main>
+
+    <footer class="mt-6 flex justify-between items-center text-gray-400 text-xs font-bold">
+        <div>SISTEMA DE MONITOREO EN TIEMPO REAL v2.5 PWA</div>
+        <div class="text-blue-900 text-xl italic font-black">DAIFUKU</div>
+    </footer>
+
+    <script>
+        // --- Registro de Service Worker para PWA ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    self.addEventListener('install', (e) => {});
+                    self.addEventListener('fetch', (e) => {
+                        e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+                    });
+                `;
+                const blob = new Blob([swCode], { type: 'text/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swUrl).catch(err => console.log('SW failed', err));
+            });
+        }
+
+        // Datos Iniciales
+        let state = {
+            ocupacion: 95.7,
+            totesVacios: 89,
+            entrando: 1762,
+            saliendo: 32,
+            tos: 1734,
+            errores: [
+                { label: "Ubicación inhabilitada", valor: 92, perc: 76.6 },
+                { label: "Tote duplicado en WRX", valor: 5, perc: 4.1 },
+                { label: "Carga en pendiente WRX", valor: 6, perc: 5.0 },
+                { label: "Sin expediente recibo", valor: 11, perc: 9.1 },
+                { label: "Orden afectada", valor: 3, perc: 2.5 }
+            ],
+            acumulados: ["345677025", "314102207", "345650005", "345677026"]
+        };
+
+        const circum = 2 * Math.PI * 42; 
+
+        function updateUI() {
+            const occ = state.ocupacion;
+            document.getElementById('text-ocupacion').innerText = occ.toFixed(1) + '%';
+            document.getElementById('text-disponible').innerText = (100 - occ).toFixed(1) + '%';
+
+            const gGreen = document.getElementById('gauge-green');
+            const gYellow = document.getElementById('gauge-yellow');
+            const gOrange = document.getElementById('gauge-orange');
+            const gRed = document.getElementById('gauge-red');
+
+            const pGreen = Math.min(occ, 50);
+            const pYellow = Math.max(0, Math.min(occ - 50, 25));
+            const pOrange = Math.max(0, Math.min(occ - 75, 15));
+            const pRed = Math.max(0, Math.min(occ - 90, 10));
+
+            const dashFactor = 2.64; 
+
+            gGreen.setAttribute('stroke-dasharray', `${pGreen * dashFactor} 264`);
+            gYellow.setAttribute('stroke-dasharray', `${pYellow * dashFactor} 264`);
+            gYellow.setAttribute('stroke-dashoffset', `-${50 * dashFactor}`);
+            gOrange.setAttribute('stroke-dasharray', `${pOrange * dashFactor} 264`);
+            gOrange.setAttribute('stroke-dashoffset', `-${75 * dashFactor}`);
+            gRed.setAttribute('stroke-dasharray', `${pRed * dashFactor} 264`);
+            gRed.setAttribute('stroke-dashoffset', `-${90 * dashFactor}`);
+
+            document.getElementById('warning-msg').style.opacity = occ > 95 ? (Date.now() % 1000 > 500 ? '1' : '0.5') : '1';
+
+            const tv = state.totesVacios;
+            document.getElementById('text-totes-vacios').innerText = tv + '%';
+            document.getElementById('text-faltante').innerText = (100 - tv) + '%';
+            document.getElementById('label-totes').innerText = tv + '%';
+            document.getElementById('circle-totes').setAttribute('stroke-dasharray', `${(tv / 100) * 251.2} 251.2`);
+
+            document.getElementById('val-entrando').innerText = state.entrando;
+            document.getElementById('val-mld').innerText = state.entrando - 10;
+            document.getElementById('val-ndk').innerText = 4;
+            document.getElementById('val-saliendo').innerText = state.saliendo;
+            document.getElementById('val-out-asy').innerText = state.saliendo;
+            document.getElementById('val-tos').innerText = state.tos;
+            document.getElementById('val-tos-plus').innerText = state.tos;
+
+            const errList = document.getElementById('error-list');
+            errList.innerHTML = state.errores.map(e => `
+                <div class="text-xs">
+                    <div class="flex justify-between mb-1">
+                        <span class="font-medium truncate pr-2">${e.label}</span>
+                        <span class="bg-orange-400 text-white px-1 rounded font-bold">${e.valor}</span>
+                    </div>
+                    <div class="w-full bg-gray-100 h-4 rounded-sm overflow-hidden border border-gray-200 relative">
+                        <div class="bg-yellow-500 h-full transition-all duration-1000" style="width: ${e.perc}%"></div>
+                        <span class="absolute inset-0 flex items-center justify-center text-[9px] font-bold">${e.perc}%</span>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('acumulados-list').innerHTML = state.acumulados.map(a => `
+                <div class="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                    <span>ID: ${Math.floor(Math.random()*99)}</span> <span>${a}</span>
+                </div>
+            `).join('');
+        }
+
+        function simulate() {
+            state.ocupacion += (Math.random() - 0.5) * 0.2;
+            if(state.ocupacion > 99.5) state.ocupacion = 99.5;
+            if(state.ocupacion < 90) state.ocupacion = 90;
+
+            state.totesVacios += Math.floor(Math.random() * 3) - 1;
+            if(state.totesVacios > 100) state.totesVacios = 100;
+            if(state.totesVacios < 10) state.totesVacios = 10;
+
+            state.entrando += Math.floor(Math.random() * 2);
+            state.saliendo += Math.floor(Math.random() * 1.2);
+            
+            updateUI();
+        }
+
+        window.onload = () => {
+            updateUI();
+            setInterval(simulate, 2000);
+        };
+    </script>
+</body>
+</html>
