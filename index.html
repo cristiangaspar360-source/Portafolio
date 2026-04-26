@@ -4,16 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ASR - Estado Operativo</title>
-    
-    <!-- Configuración para PWA (Guardar como App) -->
-    <meta name="theme-color" content="#ef4444">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2232/2232688.png">
-    
-    <!-- Web Manifest incrustado como Data URI para evitar archivos externos -->
-    <link rel="manifest" href='data:application/manifest+json,{"name":"ASR Dashboard","short_name":"ASR","start_url":".","display":"standalone","background_color":"#f3f4f6","theme_color":"#ef4444","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/2232/2232688.png","sizes":"512x512","type":"image/png"}]}'>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -216,26 +206,11 @@
     </main>
 
     <footer class="mt-6 flex justify-between items-center text-gray-400 text-xs font-bold">
-        <div>SISTEMA DE MONITOREO EN TIEMPO REAL v2.5 PWA</div>
+        <div>SISTEMA DE MONITOREO EN TIEMPO REAL v2.4</div>
         <div class="text-blue-900 text-xl italic font-black">DAIFUKU</div>
     </footer>
 
     <script>
-        // --- Registro de Service Worker para PWA ---
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                const swCode = `
-                    self.addEventListener('install', (e) => {});
-                    self.addEventListener('fetch', (e) => {
-                        e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-                    });
-                `;
-                const blob = new Blob([swCode], { type: 'text/javascript' });
-                const swUrl = URL.createObjectURL(blob);
-                navigator.serviceWorker.register(swUrl).catch(err => console.log('SW failed', err));
-            });
-        }
-
         // Datos Iniciales
         let state = {
             ocupacion: 95.7,
@@ -253,13 +228,15 @@
             acumulados: ["345677025", "314102207", "345650005", "345677026"]
         };
 
-        const circum = 2 * Math.PI * 42; 
+        const circum = 2 * Math.PI * 42; // Circunferencia del gauge
 
         function updateUI() {
+            // 1. Gauge de Ocupación
             const occ = state.ocupacion;
             document.getElementById('text-ocupacion').innerText = occ.toFixed(1) + '%';
             document.getElementById('text-disponible').innerText = (100 - occ).toFixed(1) + '%';
 
+            // Lógica de segmentos del Gauge
             const gGreen = document.getElementById('gauge-green');
             const gYellow = document.getElementById('gauge-yellow');
             const gOrange = document.getElementById('gauge-orange');
@@ -270,24 +247,30 @@
             const pOrange = Math.max(0, Math.min(occ - 75, 15));
             const pRed = Math.max(0, Math.min(occ - 90, 10));
 
-            const dashFactor = 2.64; 
+            const dashFactor = 2.64; // circum / 100
 
             gGreen.setAttribute('stroke-dasharray', `${pGreen * dashFactor} 264`);
+            
             gYellow.setAttribute('stroke-dasharray', `${pYellow * dashFactor} 264`);
             gYellow.setAttribute('stroke-dashoffset', `-${50 * dashFactor}`);
+
             gOrange.setAttribute('stroke-dasharray', `${pOrange * dashFactor} 264`);
             gOrange.setAttribute('stroke-dashoffset', `-${75 * dashFactor}`);
+
             gRed.setAttribute('stroke-dasharray', `${pRed * dashFactor} 264`);
             gRed.setAttribute('stroke-dashoffset', `-${90 * dashFactor}`);
 
+            // Warning Blink
             document.getElementById('warning-msg').style.opacity = occ > 95 ? (Date.now() % 1000 > 500 ? '1' : '0.5') : '1';
 
+            // 2. Totes Vacíos
             const tv = state.totesVacios;
             document.getElementById('text-totes-vacios').innerText = tv + '%';
             document.getElementById('text-faltante').innerText = (100 - tv) + '%';
             document.getElementById('label-totes').innerText = tv + '%';
             document.getElementById('circle-totes').setAttribute('stroke-dasharray', `${(tv / 100) * 251.2} 251.2`);
 
+            // 3. Métricas
             document.getElementById('val-entrando').innerText = state.entrando;
             document.getElementById('val-mld').innerText = state.entrando - 10;
             document.getElementById('val-ndk').innerText = 4;
@@ -296,6 +279,7 @@
             document.getElementById('val-tos').innerText = state.tos;
             document.getElementById('val-tos-plus').innerText = state.tos;
 
+            // 4. Errores
             const errList = document.getElementById('error-list');
             errList.innerHTML = state.errores.map(e => `
                 <div class="text-xs">
@@ -310,6 +294,7 @@
                 </div>
             `).join('');
 
+            // 5. Acumulados
             document.getElementById('acumulados-list').innerHTML = state.acumulados.map(a => `
                 <div class="flex justify-between border-b border-dashed border-gray-200 pb-1">
                     <span>ID: ${Math.floor(Math.random()*99)}</span> <span>${a}</span>
@@ -317,21 +302,26 @@
             `).join('');
         }
 
+        // Simulación de cambios
         function simulate() {
+            // Ocupación fluctúa levemente
             state.ocupacion += (Math.random() - 0.5) * 0.2;
             if(state.ocupacion > 99.5) state.ocupacion = 99.5;
             if(state.ocupacion < 90) state.ocupacion = 90;
 
+            // Totes cambian
             state.totesVacios += Math.floor(Math.random() * 3) - 1;
             if(state.totesVacios > 100) state.totesVacios = 100;
             if(state.totesVacios < 10) state.totesVacios = 10;
 
+            // Entradas/Salidas crecen
             state.entrando += Math.floor(Math.random() * 2);
             state.saliendo += Math.floor(Math.random() * 1.2);
             
             updateUI();
         }
 
+        // Iniciar
         window.onload = () => {
             updateUI();
             setInterval(simulate, 2000);
